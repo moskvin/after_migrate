@@ -12,6 +12,19 @@ module AfterMigrate
       end
     end
 
-    def all_tables(**) = []
+    def all_tables(schema: nil)
+      connection = ActiveRecord::Base.connection
+      database = schema.to_s.presence || connection.current_database
+
+      connection.select_values(<<~SQL.squish)
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = #{connection.quote(database)}
+          AND table_type = 'BASE TABLE'           -- exclude views
+          AND table_name NOT LIKE 'ar_internal_metadata'
+          AND table_name NOT LIKE 'schema_migrations'
+        ORDER BY table_name
+      SQL
+    end
   end
 end

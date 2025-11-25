@@ -16,15 +16,15 @@ module AfterMigrate
     end
 
     rake_tasks do
-      next unless AfterMigrate.configuration.enabled
-      next unless AfterMigrate.configuration.rake_tasks_enhanced
-
       %w[
         db:migrate
         db:migrate:up
         db:migrate:redo
       ].each do |task_name|
         Rake::Task[task_name].enhance do
+          next unless AfterMigrate.configuration.enabled
+          next unless AfterMigrate.configuration.rake_tasks_enhanced
+
           AfterMigrate::Executor.call(reset: true)
         end
       end

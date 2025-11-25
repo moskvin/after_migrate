@@ -12,12 +12,9 @@ Gem::Specification.new do |spec|
 
   spec.summary       = 'Automatically ANALYZE and VACUUM tables touched during Rails migrations.'
   spec.description = <<~DESC
-    after_migrate automatically runs database maintenance (ANALYZE, VACUUM, PRAGMA optimize)#{' '}
-    on exactly the tables that were created or modified during a `rails db:migrate` run.
-
-    Stale optimizer statistics and fragmentation are silent performance killers after migrations.
-    This gem detects which tables were touched (via SQL introspection) and runs the correct#{' '}
-    maintenance command for your database.
+    Runs database maintenance (ANALYZE, VACUUM, PRAGMA optimize) on exactly the tables
+    created or modified during `rails db:migrate`. Keeps query planner statistics fresh
+    and prevents fragmentation after every schema change - automatically.
   DESC
   spec.homepage = 'https://github.com/moskvin/after_migrate'
 

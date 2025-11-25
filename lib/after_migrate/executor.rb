@@ -11,7 +11,7 @@ module AfterMigrate
     module_function
 
     def call(reset: true, schema: nil)
-      AfterMigrate.log("Executing schema: #{schema} -> #{target_tables}...")
+      # AfterMigrate.log("Executing schema: #{schema} -> #{target_tables}...")
       return if target_tables.blank?
       return run_optimize(schema:, tables: target_tables[schema]) if schema.present?
 

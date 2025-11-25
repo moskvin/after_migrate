@@ -16,6 +16,17 @@ module AfterMigrate
       end
     end
 
-    def all_tables(**) = []
+    def all_tables(**)
+      # SQLite has no concept of schema (everything is in one file)
+      # The `schema:` parameter is ignored — there's only one database
+      ActiveRecord::Base.connection.select_values(<<~SQL.squish)
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name NOT LIKE 'sqlite_%'
+          AND name NOT IN ('ar_internal_metadata', 'schema_migrations')
+        ORDER BY name
+      SQL
+    end
   end
 end
