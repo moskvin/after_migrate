@@ -1,35 +1,97 @@
 # AfterMigrate
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/after_migrate`. To experiment with that code, run `bin/console` for an interactive prompt.
+**Automatically run database maintenance after Rails migrations**
 
-TODO: Delete this and the text above, and describe your gem
+`after_migrate` detects tables touched during `rails db:migrate` (or related tasks) and runs the appropriate optimizer commands:
 
-## Installation
+- **PostgreSQL** → `ANALYZE` (affected tables or all) + optional `VACUUM`
+- **SQLite**     → `PRAGMA optimize` (or `VACUUM` + `ANALYZE`)
+- **MySQL**      → `ANALYZE TABLE`
 
-Add this line to your application's Gemfile:
+Stale statistics and fragmentation after schema changes silently hurt query performance.  
+`after_migrate` fixes it - automatically and precisely.
+
+![after_migrate](./logo.png)
+
+> **Because every migration deserves a cleanup.**
+
+[![Gem Version](https://badge.fury.io/rb/after_migrate.svg)](https://badge.fury.io/rb/after_migrate)
+
+---
+
+## ✨ Features
+
+- Smart detection of affected tables (CREATE/ALTER/INSERT/UPDATE/DELETE/etc.)
+- Zero false positives - ignores views, columns, system tables, and complex joins
+- Configurable via environment variables or initializer block
+- Supports `db:migrate`, `db:rollback`, `db:migrate:redo`
+- No monkey-patching of ActiveRecord core classes
+- Works in development, test, CI, and production
+- Rails 7.0+ / Ruby 3.2+ only
+- Dependency-free
+
+---
+
+## 📦 Installation
+
+Add to your Gemfile:
 
 ```ruby
 gem 'after_migrate'
 ```
 
-And then execute:
+Then run:
 
-    $ bundle
+```bash
+bundle install
+```
 
-Or install it yourself as:
+---
 
-    $ gem install after_migrate
+## 🚀 Usage
 
-## Usage
+The gem activates automatically. No code required for default behavior.
 
-TODO: Write usage instructions here
+### Default behavior (recommended)
 
-## Development
+Out of the box, it runs `ANALYZE` on **only the tables touched** during the migration (PostgreSQL default).
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+### Configuration
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+Create `config/initializers/after_migrate.rb`:
 
-## Contributing
+```ruby
+AfterMigrate.configure do |config|
+  # Enable/disable the gem
+  config.enabled = true
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/after_migrate.
+  # Log what’s happening
+  config.verbose = true
+
+  # Run VACUUM on affected tables (PostgreSQL only)
+  config.vacuum = false
+
+  # Choose ANALYZE strategy
+  # "only_affected_tables" - default, precise
+  # "all_tables"           - full database analyze
+  # "none"                 - skip ANALYZE entirely
+  config.analyze = "only_affected_tables"
+
+  # Enhance rake tasks (runs maintenance after db:migrate etc.)
+  # Set to false in test env if needed
+  config.rake_tasks_enhanced = true
+end
+```
+---
+
+## 🤝 Contributing
+
+Bug reports, feature requests, and pull requests are very welcome!
+
+https://github.com/moskvin/after_migrate
+
+---
+
+## 📝 License
+
+This project is available under the MIT License.
