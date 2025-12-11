@@ -2,6 +2,8 @@
 
 module AfterMigrate
   module Mysql
+    extend Sql
+
     module_function
 
     def optimize_tables(connection:, table_names:, **)

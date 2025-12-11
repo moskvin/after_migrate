@@ -2,6 +2,8 @@
 
 module AfterMigrate
   module Sqlite
+    extend Sql
+
     module_function
 
     def optimize_tables(connection:, **)

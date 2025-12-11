@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'after_migrate/adapters/sql'
 require 'after_migrate/adapters/mysql'
 require 'after_migrate/adapters/postgresql'
 require 'after_migrate/adapters/sqlite'

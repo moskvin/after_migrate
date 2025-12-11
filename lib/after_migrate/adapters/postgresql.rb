@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
+require 'pg_query'
+
 module AfterMigrate
   module Postgresql
+    extend Sql
+
     module_function
 
     def vacuum(table_name, schema: nil, verbose: true)
@@ -64,22 +68,26 @@ module AfterMigrate
       tables = table_names - cleaned_tables
       run_analyze(schema:, tables:)
     end
-  end
 
-  def all_tables(schema: nil)
-    connection = ActiveRecord::Base.connection
-    schema_value = schema ? schema.to_s.strip : 'public'
+    def all_tables(schema: nil)
+      connection = ActiveRecord::Base.connection
+      schema_value = schema ? schema.to_s.strip : 'public'
 
-    query = <<~SQL.squish
-      SELECT c.relname AS table_name
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname = #{connection.quote(schema_value)}
-        AND c.relkind IN ('r', 'p')        -- ordinary tables + partitioned tables
-        AND c.relispartition = FALSE      -- exclude partition child tables
-      ORDER BY table_name
-    SQL
+      query = <<~SQL.squish
+        SELECT c.relname AS table_name
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = #{connection.quote(schema_value)}
+          AND c.relkind IN ('r', 'p')        -- ordinary tables + partitioned tables
+          AND c.relispartition = FALSE      -- exclude partition child tables
+        ORDER BY table_name
+      SQL
 
-    connection.select_values(query)
+      connection.select_values(query)
+    end
+
+    def parse_tables(sql)
+      PgQuery.parse(sql).tables
+    end
   end
 end

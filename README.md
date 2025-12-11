@@ -28,7 +28,6 @@ Stale statistics and fragmentation after schema changes silently hurt query perf
 - No monkey-patching of ActiveRecord core classes
 - Works in development, test, CI, and production
 - Rails 7.0+ / Ruby 3.2+ only
-- Dependency-free
 
 ---
 
