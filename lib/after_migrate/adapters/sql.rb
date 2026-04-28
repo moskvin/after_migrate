@@ -8,13 +8,13 @@ module AfterMigrate
     /x
 
     PATTERNS = {
-      update: /update\s+(?:only\s+)?(#{IDENT})(?!\s*\()/ix,
-      insert: /insert\s+into\s+(#{IDENT})(?!\s*\()/ix,
-      delete: /delete\s+from\s+(#{IDENT})(?!\s*\()/ix,
-      drop_table: /drop\s+table\s+(?:if\s+exists\s+)?(#{IDENT})(?!\s*\()/ix,
-      alter_table: /alter\s+table\s+(#{IDENT})(?!\s*\()/ix,
-      create_table: /create\s+table\s+(?:if\s+not\s+exists\s+)?(#{IDENT})(?!\s*\()/ix,
-      from_join: /(?:from|join)\s+(#{IDENT})(?!\s*\()/ix
+      update: /update\s+(?:only\s+)?(#{IDENT})(?!\()/ix,
+      insert: /insert\s+into\s+(#{IDENT})(?!\()/ix,
+      delete: /delete\s+from\s+(#{IDENT})(?!\()/ix,
+      drop_table: /drop\s+table\s+(?:if\s+exists\s+)?(#{IDENT})(?!\()/ix,
+      alter_table: /alter\s+table\s+(#{IDENT})(?!\()/ix,
+      create_table: /create\s+table\s+(?:if\s+not\s+exists\s+)?(#{IDENT})(?!\()/ix,
+      from_join: /(?:from|join)\s+(#{IDENT})(?!\()/ix
     }.freeze
 
     def parse_tables(sql)

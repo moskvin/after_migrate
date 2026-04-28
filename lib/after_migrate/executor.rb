@@ -11,16 +11,17 @@ module AfterMigrate
 
     module_function
 
-    def call(reset: true, schema: nil)
-      # AfterMigrate.log("Executing schema: #{schema} -> #{target_tables}...")
-      return if target_tables.blank?
-      return run_optimize(schema:, tables: target_tables[schema]) if schema.present?
+    def call(schema: nil)
+      tables = target_tables
+      return if tables.blank?
 
-      target_tables.each do |s, tables|
-        run_optimize(schema: s, tables:)
+      if schema.present?
+        run_optimize(schema:, tables: tables[schema]) if tables[schema].present?
+      else
+        tables.each { |s, t| run_optimize(schema: s, tables: t) }
       end
     ensure
-      AfterMigrate::Current.reset if reset
+      AfterMigrate.reset!
     end
 
     public :call
@@ -31,14 +32,13 @@ module AfterMigrate
       table_names = tables.to_a.sort
       return if table_names.empty?
 
-      AfterMigrate.log("Migration touched #{table_names.size} table(s): #{table_names.join(', ')}")
+      AfterMigrate.log("Migration touched #{table_names.size} table(s) in schema #{schema.inspect}: #{table_names.join(', ')}")
       optimize_tables(schema:, table_names:)
     end
 
     def optimize_tables(schema:, table_names:)
       connection = ActiveRecord::Base.connection
-      adapter = connection.adapter_name
-      case adapter
+      case connection.adapter_name
       when 'PostgreSQL'
         AfterMigrate::Postgresql.optimize_tables(schema:, table_names:, connection:)
       when 'SQLite'
@@ -46,27 +46,26 @@ module AfterMigrate
       when 'Mysql2', 'Trilogy'
         AfterMigrate::Mysql.optimize_tables(schema:, table_names:, connection:)
       else
-        AfterMigrate.log("No maintenance implemented for #{adapter}")
+        AfterMigrate.log("No maintenance implemented for #{connection.adapter_name}")
       end
     end
 
     def target_tables
       case AfterMigrate.configuration.analyze
       when 'all_tables'
-        AfterMigrate::Current.affected_tables.each_value do |schema|
-          all_tables(schema:)
+        AfterMigrate.affected_tables.keys.each_with_object({}) do |schema, hash|
+          hash[schema] = all_tables(schema:)
         end
       when 'only_affected_tables'
-        AfterMigrate::Current.affected_tables
+        AfterMigrate.affected_tables
       else
-        []
+        {}
       end
     end
 
     def all_tables(schema:)
       connection = ActiveRecord::Base.connection
-      adapter = connection.adapter_name
-      case adapter
+      case connection.adapter_name
       when 'PostgreSQL'
         AfterMigrate::Postgresql.all_tables(schema:)
       when 'SQLite'

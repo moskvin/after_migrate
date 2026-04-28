@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-04-28
+
+### Added
+- `defer` configuration option (default: `true`) — when enabled, rake task enhancements only collect touched tables; they do not run maintenance automatically
+- `AfterMigrate.run!` public API to explicitly trigger maintenance on all collected tables across all schemas, then clear the store — intended to be called once after all tenant migrations complete in multi-tenant setups
+- `after_migrate:run` rake task as a convenience wrapper around `AfterMigrate.run!`
+
+### Changed
+- **Breaking**: replaced `AfterMigrate::Current` (`ActiveSupport::CurrentAttributes`) with a module-level persistent store (`Concurrent::Map`). The store accumulates touched tables across multiple rake task invocations and only resets when `AfterMigrate.run!` is called.
+- Fixed `all_tables` analyze mode - previously iterated `.each_value` (yielding `Concurrent::Set` objects) instead of schema names, producing incorrect SQL queries.
+
+### Removed
+- `AfterMigrate::Current` - no longer needed. If you referenced this class directly, use `AfterMigrate.affected_tables` instead.
+- `Executor.call(reset:)` parameter - the store is always cleared after `run!`; pass `schema:` to scope execution to a single schema.
+
 ## [0.1.0] - 2025-04-05
 
 ### Added

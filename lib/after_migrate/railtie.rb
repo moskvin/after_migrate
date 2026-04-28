@@ -12,6 +12,8 @@ module AfterMigrate
         AfterMigrate::Collector.call(*args)
       end
 
+      # Unsubscribe when the app starts serving requests so normal web traffic
+      # is never collected.
       app.executor.to_run { ActiveSupport::Notifications.unsubscribe(subscription) }
     end
 
@@ -24,8 +26,16 @@ module AfterMigrate
         Rake::Task[task_name].enhance do
           next unless AfterMigrate.configuration.enabled
           next unless AfterMigrate.configuration.rake_tasks_enhanced
+          next if AfterMigrate.configuration.defer
 
-          AfterMigrate::Executor.call(reset: true)
+          AfterMigrate.run!
+        end
+      end
+
+      namespace :after_migrate do
+        desc 'Run database maintenance (ANALYZE/VACUUM) on all tables collected across migrations'
+        task run: :environment do
+          AfterMigrate.run!
         end
       end
     end
