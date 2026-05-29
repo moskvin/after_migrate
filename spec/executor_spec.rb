@@ -33,7 +33,8 @@ describe AfterMigrate::Executor do
     context 'analyze: all_tables' do
       before do
         AfterMigrate.configuration.analyze = 'all_tables'
-        allow(AfterMigrate::Postgresql).to receive(:all_tables).with(schema: 'public')
+        allow(AfterMigrate::Postgresql).to receive(:all_tables)
+          .with(schema: 'public')
           .and_return(%w[comments posts users])
       end
 

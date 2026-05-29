@@ -3,8 +3,8 @@
 module AfterMigrate
   module Sql
     IDENT = /
-      (?:"[\w]+"|\w+)
-      (?:\.(?:"[\w]+"|\w+))*
+      (?:"\w+"|\w+)
+      (?:\.(?:"\w+"|\w+))*
     /x
 
     PATTERNS = {

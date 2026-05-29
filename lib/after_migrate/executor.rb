@@ -34,7 +34,8 @@ module AfterMigrate
       table_names = tables.to_a.sort
       return if table_names.empty?
 
-      AfterMigrate.log("Migration touched #{table_names.size} table(s) in schema #{schema.inspect}: #{table_names.join(', ')}")
+      message = "Migration touched #{table_names.size} table(s) in schema #{schema.inspect}: #{table_names.join(', ')}"
+      AfterMigrate.log(message)
       optimize_tables(schema:, table_names:)
     end
 

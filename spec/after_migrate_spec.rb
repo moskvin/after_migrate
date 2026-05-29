@@ -49,7 +49,7 @@ describe AfterMigrate do
 
   describe '.merge_tables' do
     it 'accumulates table names per schema' do
-      AfterMigrate.merge_tables('public', ['users', 'posts'])
+      AfterMigrate.merge_tables('public', %w[users posts])
       AfterMigrate.merge_tables('public', ['comments'])
       expect(AfterMigrate.affected_tables['public'].to_a).to match_array(%w[users posts comments])
     end
