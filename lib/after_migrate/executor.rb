@@ -12,6 +12,8 @@ module AfterMigrate
     module_function
 
     def call(schema: nil)
+      return unless AfterMigrate.configuration.vacuum || AfterMigrate.configuration.analyze != 'none'
+
       tables = target_tables
       return if tables.blank?
 
@@ -56,10 +58,9 @@ module AfterMigrate
         AfterMigrate.affected_tables.keys.each_with_object({}) do |schema, hash|
           hash[schema] = all_tables(schema:)
         end
-      when 'only_affected_tables'
-        AfterMigrate.affected_tables
       else
-        {}
+        # 'only_affected_tables' or 'none' — vacuum still needs the affected list
+        AfterMigrate.affected_tables
       end
     end
 

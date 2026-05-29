@@ -11,6 +11,7 @@ describe AfterMigrate::Executor do
   after do
     AfterMigrate.reset!
     AfterMigrate.configuration.analyze = 'only_affected_tables'
+    AfterMigrate.configuration.vacuum = true
   end
 
   describe '.call' do
@@ -46,14 +47,36 @@ describe AfterMigrate::Executor do
     context 'analyze: none' do
       before { AfterMigrate.configuration.analyze = 'none' }
 
-      it 'does not call optimize_tables' do
-        expect(AfterMigrate::Postgresql).not_to receive(:optimize_tables)
-        AfterMigrate::Executor.call
+      context 'and vacuum: false' do
+        before { AfterMigrate.configuration.vacuum = false }
+
+        it 'does not call optimize_tables' do
+          expect(AfterMigrate::Postgresql).not_to receive(:optimize_tables)
+          AfterMigrate::Executor.call
+        end
+
+        it 'still resets the store' do
+          AfterMigrate::Executor.call
+          expect(AfterMigrate.affected_tables).to be_empty
+        end
       end
 
-      it 'still resets the store' do
-        AfterMigrate::Executor.call
-        expect(AfterMigrate.affected_tables).to be_empty
+      context 'and vacuum: true' do
+        before do
+          AfterMigrate.configuration.vacuum = true
+          allow(AfterMigrate::Postgresql).to receive(:optimize_tables)
+        end
+
+        it 'still calls optimize_tables so the adapter can vacuum' do
+          expect(AfterMigrate::Postgresql).to receive(:optimize_tables)
+            .with(schema: 'public', table_names: %w[posts users], connection: connection)
+          AfterMigrate::Executor.call
+        end
+
+        it 'resets the store' do
+          AfterMigrate::Executor.call
+          expect(AfterMigrate.affected_tables).to be_empty
+        end
       end
     end
 

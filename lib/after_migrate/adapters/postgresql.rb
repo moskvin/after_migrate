@@ -9,7 +9,8 @@ module AfterMigrate
     module_function
 
     def vacuum(table_name, schema: nil, verbose: true)
-      table = ActiveRecord::Base.connection.quote_table_name("#{schema}.#{table_name}")
+      qualified = schema.present? ? "#{schema}.#{table_name}" : table_name
+      table = ActiveRecord::Base.connection.quote_table_name(qualified)
       query = <<~SQL.squish
         VACUUM (#{'VERBOSE, ' if verbose}ANALYZE, INDEX_CLEANUP ON) #{table};
       SQL
@@ -41,10 +42,11 @@ module AfterMigrate
       ActiveRecord::Base.connection.execute(query)
     end
 
-    def run_vacuum(schema:)
+    def run_vacuum(schema:, table_names: nil)
       tables_with_dead_tuples = dead_tuples(schema:).pluck('relname')
+      tables_with_dead_tuples &= Array(table_names) if table_names
       AfterMigrate.log("Vacuuming #{tables_with_dead_tuples.size} tables in schema #{schema}...")
-      tables_with_dead_tuples.each { |t| vacuum(t) }
+      tables_with_dead_tuples.each { |t| vacuum(t, schema:, verbose: AfterMigrate.configuration.verbose) }
       tables_with_dead_tuples
     end
 
@@ -63,7 +65,9 @@ module AfterMigrate
 
     def optimize_tables(table_names:, schema:, **)
       cleaned_tables = []
-      cleaned_tables = run_vacuum(schema:) if AfterMigrate.configuration.vacuum
+      cleaned_tables = run_vacuum(schema:, table_names:) if AfterMigrate.configuration.vacuum
+
+      return if AfterMigrate.configuration.analyze == 'none'
 
       tables = table_names - cleaned_tables
       run_analyze(schema:, tables:)
