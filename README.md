@@ -83,6 +83,30 @@ end
 ```
 ---
 
+## 🚢 Releasing
+
+Use the guarded helper to make sure git is pushed before RubyGems publish:
+
+```bash
+bin/release
+```
+
+What it does:
+- requires a clean git worktree
+- ensures you are on the default branch (`origin/HEAD` fallback)
+- checks branch sync status vs `origin`
+- runs `bundle exec rspec` and `bundle exec rubocop`
+- pushes the branch first
+- runs `bundle exec rake release` (build/tag/push/publish)
+
+Optional:
+
+```bash
+bin/release --skip-checks
+```
+
+---
+
 ## 🤝 Contributing
 
 Bug reports, feature requests, and pull requests are very welcome!
