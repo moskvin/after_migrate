@@ -22,7 +22,7 @@ This is a Rails gem that automatically runs database maintenance (`ANALYZE`, `VA
 
 2. **`Collector`** (`lib/after_migrate/collector.rb`) — receives every SQL notification, filters to DDL/DML statements (CREATE/ALTER/DROP/INSERT/UPDATE/DELETE), calls the adapter-specific parser, and accumulates table names into `AfterMigrate.affected_tables` (a `Concurrent::Map<schema, Concurrent::Set<table_name>>`).
 
-3. **`AfterMigrate.affected_tables`** (module-level store in `lib/after_migrate.rb`) — a `Concurrent::Map` that persists across multiple rake task invocations. Only cleared when `AfterMigrate.run!` (or `AfterMigrate.reset!`) is called. This replaces the old `Current` (`ActiveSupport::CurrentAttributes`) which was reset after every migration.
+3. **`AfterMigrate.store`** (`lib/after_migrate/store.rb`) — defaults to an in-memory `Concurrent::Map` wrapped by `AfterMigrate::Stores::Memory`. `AfterMigrate.affected_tables`, `merge_tables`, and `reset!` delegate to the store. The memory store persists across multiple rake task invocations inside one Ruby process and is cleared by `AfterMigrate.run!` (or `AfterMigrate.reset!`). This replaces the old `Current` (`ActiveSupport::CurrentAttributes`) which was reset after every migration.
 
 4. **`Executor`** (`lib/after_migrate/executor.rb`) — iterates `AfterMigrate.affected_tables` and calls the correct adapter's `optimize_tables`. Respects the `analyze` config option (`only_affected_tables` / `all_tables` / `none`). Always calls `AfterMigrate.reset!` in its `ensure` block.
 
