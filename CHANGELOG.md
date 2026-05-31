@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2] - 2026-05-31
+
+### Added
+- Configurable store backend via `config.store`, with `:memory` as the default and `:file` for persistence across separate migration task processes
+- `config.store_path` to control where the file-backed store writes collected table names
+- `config.run_id` to isolate persisted file-store data between independent migration runs
+- File-store locking and atomic writes to avoid corrupting persisted table data during concurrent access
+- Specs for file-store persistence, corrupt JSON handling, adapter dispatch, unsupported adapters, and deferred rake task behavior
+
+### Changed
+- `AfterMigrate.affected_tables`, `AfterMigrate.merge_tables`, and `AfterMigrate.reset!` now delegate through the configured store backend
+- Executor resets the store when maintenance is disabled or no tables are pending, but keeps collected tables when adapter optimization raises so a later run can retry
+
+## [0.2.1] - 2026-05-29
+
+### Changed
+- Refactored SQL identifier matching used by the parser without changing supported table-detection behavior
+- Split executor migration logging message construction into a local variable for clearer formatting and maintenance
+- Added RuboCop project configuration for documentation, method length, and spec block length rules
+
 ## [0.2.0] - 2026-04-28
 
 ### Added
