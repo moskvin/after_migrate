@@ -4,6 +4,9 @@ describe AfterMigrate do
   after do
     AfterMigrate.reset!
     AfterMigrate.configuration.enabled = true
+    AfterMigrate.configuration.store = :memory
+    AfterMigrate.configuration.store_path = 'tmp/after_migrate/affected_tables.json'
+    AfterMigrate.configuration.run_id = nil
   end
 
   describe '.run!' do
@@ -40,6 +43,11 @@ describe AfterMigrate do
       expect(AfterMigrate.affected_tables).to be_a(Concurrent::Map)
     end
 
+    it 'uses the configured store object' do
+      expect(AfterMigrate.store).to receive(:affected_tables).and_call_original
+      AfterMigrate.affected_tables
+    end
+
     it 'is reset to a fresh map after reset!' do
       AfterMigrate.merge_tables('public', ['users'])
       AfterMigrate.reset!
@@ -63,6 +71,19 @@ describe AfterMigrate do
     it 'ignores blank table_names' do
       AfterMigrate.merge_tables('public', [])
       expect(AfterMigrate.affected_tables).to be_empty
+    end
+  end
+
+  describe '.store' do
+    it 'defaults to the memory store' do
+      expect(AfterMigrate.store).to be_a(AfterMigrate::Stores::Memory)
+    end
+
+    it 'uses a file store when configured' do
+      AfterMigrate.configuration.store = :file
+      AfterMigrate.configuration.store_path = '/tmp/after_migrate-test.json'
+
+      expect(AfterMigrate.store).to be_a(AfterMigrate::Stores::FileStore)
     end
   end
 end

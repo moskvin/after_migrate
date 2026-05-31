@@ -12,6 +12,9 @@ describe AfterMigrate::Executor do
     AfterMigrate.reset!
     AfterMigrate.configuration.analyze = 'only_affected_tables'
     AfterMigrate.configuration.vacuum = true
+    AfterMigrate.configuration.store = :memory
+    AfterMigrate.configuration.store_path = 'tmp/after_migrate/affected_tables.json'
+    AfterMigrate.configuration.run_id = nil
   end
 
   describe '.call' do
@@ -41,6 +44,93 @@ describe AfterMigrate::Executor do
       it 'passes the full table list for each affected schema to the adapter' do
         expect(AfterMigrate::Postgresql).to receive(:optimize_tables)
           .with(schema: 'public', table_names: %w[comments posts users], connection: connection)
+        AfterMigrate::Executor.call
+      end
+    end
+
+    context 'adapter dispatch' do
+      it 'optimizes SQLite tables' do
+        allow(connection).to receive(:adapter_name).and_return('SQLite')
+
+        expect(AfterMigrate::Sqlite).to receive(:optimize_tables)
+          .with(schema: 'public', table_names: %w[posts users], connection:)
+
+        AfterMigrate::Executor.call
+      end
+
+      it 'optimizes Mysql2 tables' do
+        allow(connection).to receive(:adapter_name).and_return('Mysql2')
+
+        expect(AfterMigrate::Mysql).to receive(:optimize_tables)
+          .with(schema: 'public', table_names: %w[posts users], connection:)
+
+        AfterMigrate::Executor.call
+      end
+
+      it 'optimizes Trilogy tables' do
+        allow(connection).to receive(:adapter_name).and_return('Trilogy')
+
+        expect(AfterMigrate::Mysql).to receive(:optimize_tables)
+          .with(schema: 'public', table_names: %w[posts users], connection:)
+
+        AfterMigrate::Executor.call
+      end
+
+      it 'logs unsupported adapters' do
+        allow(connection).to receive(:adapter_name).and_return('OracleEnhanced')
+        allow(AfterMigrate).to receive(:log)
+
+        expect(AfterMigrate).to receive(:log)
+          .with('No maintenance implemented for OracleEnhanced')
+
+        AfterMigrate::Executor.call
+      end
+    end
+
+    context 'all_tables adapter dispatch' do
+      before { AfterMigrate.configuration.analyze = 'all_tables' }
+
+      it 'loads all SQLite tables' do
+        allow(connection).to receive(:adapter_name).and_return('SQLite')
+        allow(AfterMigrate::Sqlite).to receive(:all_tables)
+          .with(schema: 'public')
+          .and_return(%w[comments users])
+
+        expect(AfterMigrate::Sqlite).to receive(:optimize_tables)
+          .with(schema: 'public', table_names: %w[comments users], connection:)
+
+        AfterMigrate::Executor.call
+      end
+
+      it 'loads all Mysql2 tables' do
+        allow(connection).to receive(:adapter_name).and_return('Mysql2')
+        allow(AfterMigrate::Mysql).to receive(:all_tables)
+          .with(schema: 'public')
+          .and_return(%w[comments users])
+
+        expect(AfterMigrate::Mysql).to receive(:optimize_tables)
+          .with(schema: 'public', table_names: %w[comments users], connection:)
+
+        AfterMigrate::Executor.call
+      end
+
+      it 'loads all Trilogy tables' do
+        allow(connection).to receive(:adapter_name).and_return('Trilogy')
+        allow(AfterMigrate::Mysql).to receive(:all_tables)
+          .with(schema: 'public')
+          .and_return(%w[comments users])
+
+        expect(AfterMigrate::Mysql).to receive(:optimize_tables)
+          .with(schema: 'public', table_names: %w[comments users], connection:)
+
+        AfterMigrate::Executor.call
+      end
+
+      it 'returns no tables for unsupported adapters' do
+        allow(connection).to receive(:adapter_name).and_return('OracleEnhanced')
+
+        expect(AfterMigrate).not_to receive(:log)
+
         AfterMigrate::Executor.call
       end
     end
@@ -113,9 +203,9 @@ describe AfterMigrate::Executor do
         allow(AfterMigrate::Postgresql).to receive(:optimize_tables).and_raise(StandardError, 'DB error')
       end
 
-      it 'still resets the store via ensure' do
+      it 'keeps the store so a later run can retry maintenance' do
         expect { AfterMigrate::Executor.call }.to raise_error(StandardError, 'DB error')
-        expect(AfterMigrate.affected_tables).to be_empty
+        expect(AfterMigrate.affected_tables['public'].to_a).to match_array(%w[posts users])
       end
     end
   end

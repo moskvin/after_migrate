@@ -4,6 +4,8 @@ require 'bundler/setup'
 require 'active_support'
 require 'active_record'
 require 'after_migrate'
+require 'securerandom'
+require 'tmpdir'
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

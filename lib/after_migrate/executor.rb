@@ -12,23 +12,32 @@ module AfterMigrate
     module_function
 
     def call(schema: nil)
-      return unless AfterMigrate.configuration.vacuum || AfterMigrate.configuration.analyze != 'none'
+      return reset_store unless maintenance_enabled?
 
       tables = target_tables
-      return if tables.blank?
+      return reset_store if tables.blank?
 
-      if schema.present?
-        run_optimize(schema:, tables: tables[schema]) if tables[schema].present?
-      else
-        tables.each { |s, t| run_optimize(schema: s, tables: t) }
-      end
-    ensure
-      AfterMigrate.reset!
+      run_optimizations(schema:, tables:)
+      reset_store
     end
 
     public :call
 
     private
+
+    def maintenance_enabled?
+      AfterMigrate.configuration.vacuum || AfterMigrate.configuration.analyze != 'none'
+    end
+
+    def reset_store
+      AfterMigrate.reset!
+    end
+
+    def run_optimizations(schema:, tables:)
+      return run_optimize(schema:, tables: tables[schema]) if schema.present? && tables[schema].present?
+
+      tables.each { |s, t| run_optimize(schema: s, tables: t) } unless schema.present?
+    end
 
     def run_optimize(schema:, tables:)
       table_names = tables.to_a.sort
