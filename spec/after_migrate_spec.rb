@@ -4,11 +4,17 @@ describe AfterMigrate do
   after do
     AfterMigrate.configuration.enabled = true
     AfterMigrate.configuration.store = :memory
-    AfterMigrate.configuration.store_path = 'tmp/after_migrate/affected_tables.json'
-    AfterMigrate.configuration.run_id = nil
-    AfterMigrate.configuration.redis = nil
-    AfterMigrate.configuration.redis_key_prefix = 'after_migrate'
-    AfterMigrate.configuration.redis_ttl = 24 * 60 * 60
+    AfterMigrate.configuration.run_id = 'default'
+    AfterMigrate.configuration.store_options = {
+      file: {
+        path: 'tmp/after_migrate/affected_tables.json'
+      },
+      redis: {
+        client: nil,
+        key_prefix: 'after_migrate',
+        ttl: 24 * 60 * 60
+      }
+    }
     AfterMigrate.instance_variable_set(:@store, nil)
     AfterMigrate.instance_variable_set(:@store_key, nil)
     AfterMigrate.reset!
@@ -86,16 +92,39 @@ describe AfterMigrate do
 
     it 'uses a file store when configured' do
       AfterMigrate.configuration.store = :file
-      AfterMigrate.configuration.store_path = '/tmp/after_migrate-test.json'
+      AfterMigrate.configuration.store_options_for(:file)[:path] = '/tmp/after_migrate-test.json'
 
       expect(AfterMigrate.store).to be_a(AfterMigrate::Stores::FileStore)
     end
 
     it 'uses a redis store when configured' do
       AfterMigrate.configuration.store = :redis
-      AfterMigrate.configuration.redis = Object.new
+      AfterMigrate.configuration.store_options_for(:redis)[:client] = Object.new
 
       expect(AfterMigrate.store).to be_a(AfterMigrate::Stores::RedisStore)
+    end
+  end
+
+  describe 'store option compatibility accessors' do
+    it 'maps file accessors to file store options' do
+      AfterMigrate.configuration.store_path = '/tmp/after-migrate.json'
+
+      expect(AfterMigrate.configuration.store_options_for(:file)[:path]).to eq('/tmp/after-migrate.json')
+      expect(AfterMigrate.configuration.store_path).to eq('/tmp/after-migrate.json')
+    end
+
+    it 'maps redis accessors to redis store options' do
+      client = Object.new
+
+      AfterMigrate.configuration.redis = client
+      AfterMigrate.configuration.redis_key_prefix = 'custom'
+      AfterMigrate.configuration.redis_ttl = 10
+
+      expect(AfterMigrate.configuration.store_options_for(:redis)).to include(
+        client: client,
+        key_prefix: 'custom',
+        ttl: 10
+      )
     end
   end
 end

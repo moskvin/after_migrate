@@ -13,8 +13,7 @@ describe AfterMigrate::Executor do
     AfterMigrate.configuration.analyze = 'only_affected_tables'
     AfterMigrate.configuration.vacuum = true
     AfterMigrate.configuration.store = :memory
-    AfterMigrate.configuration.store_path = 'tmp/after_migrate/affected_tables.json'
-    AfterMigrate.configuration.run_id = nil
+    AfterMigrate.configuration.run_id = 'default'
   end
 
   describe '.call' do

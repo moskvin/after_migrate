@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] - 2026-06-01
+
+### Added
+- `config.store_options` for store-specific settings, e.g. `config.store_options_for(:redis)[:client]`
+
+### Changed
+- Store-specific configuration now flows through `config.store_options` while preserving compatibility accessors such as `config.store_path`, `config.redis`, `config.redis_key_prefix`, and `config.redis_ttl`
+- `config.run_id` now defaults from `AFTER_MIGRATE_RUN_ID`, falling back to `default`
+
 ## [0.2.3] - 2026-06-01
 
 ### Added

@@ -9,7 +9,7 @@ require 'after_migrate/railtie'
 module AfterMigrate
   class Configuration
     attr_accessor :enabled, :verbose, :vacuum, :analyze, :rake_tasks_enhanced, :defer,
-                  :store, :store_path, :run_id, :redis, :redis_key_prefix, :redis_ttl
+                  :store, :run_id, :store_options
 
     def initialize
       @enabled = true
@@ -19,11 +19,53 @@ module AfterMigrate
       @rake_tasks_enhanced = true
       @defer = true
       @store = :memory
-      @store_path = 'tmp/after_migrate/affected_tables.json'
-      @run_id = nil
-      @redis = nil
-      @redis_key_prefix = 'after_migrate'
-      @redis_ttl = 24 * 60 * 60
+      @run_id = ENV.fetch('AFTER_MIGRATE_RUN_ID', 'default')
+      @store_options = {
+        file: {
+          path: 'tmp/after_migrate/affected_tables.json'
+        },
+        redis: {
+          client: nil,
+          key_prefix: 'after_migrate',
+          ttl: 24 * 60 * 60
+        }
+      }
+    end
+
+    def store_path
+      store_options_for(:file)[:path]
+    end
+
+    def store_path=(value)
+      store_options_for(:file)[:path] = value
+    end
+
+    def redis
+      store_options_for(:redis)[:client]
+    end
+
+    def redis=(value)
+      store_options_for(:redis)[:client] = value
+    end
+
+    def redis_key_prefix
+      store_options_for(:redis)[:key_prefix]
+    end
+
+    def redis_key_prefix=(value)
+      store_options_for(:redis)[:key_prefix] = value
+    end
+
+    def redis_ttl
+      store_options_for(:redis)[:ttl]
+    end
+
+    def redis_ttl=(value)
+      store_options_for(:redis)[:ttl] = value
+    end
+
+    def store_options_for(store_name)
+      store_options[store_name.to_sym] ||= {}
     end
   end
 
@@ -72,17 +114,15 @@ module AfterMigrate
     def store_key
       [
         configuration.store.to_s,
-        configuration.store_path.to_s,
         configuration.run_id.to_s,
-        configuration.redis_key_prefix.to_s,
-        configuration.redis_ttl.to_s
+        configuration.store_options_for(configuration.store).hash
       ]
     end
 
     def build_store
       case configuration.store.to_s
       when 'file'
-        Stores::FileStore.new(path: configuration.store_path, run_id: configuration.run_id)
+        file_store
       when 'redis'
         redis_store
       else
@@ -90,12 +130,21 @@ module AfterMigrate
       end
     end
 
+    def file_store
+      options = configuration.store_options_for(:file)
+      Stores::FileStore.new(
+        path: options.fetch(:path),
+        run_id: options.fetch(:run_id, configuration.run_id)
+      )
+    end
+
     def redis_store
+      options = configuration.store_options_for(:redis)
       Stores::RedisStore.new(
-        redis: configuration.redis,
-        key_prefix: configuration.redis_key_prefix,
-        run_id: configuration.run_id,
-        ttl: configuration.redis_ttl
+        redis: options[:client],
+        key_prefix: options.fetch(:key_prefix),
+        run_id: options.fetch(:run_id, configuration.run_id),
+        ttl: options.fetch(:ttl)
       )
     end
   end
