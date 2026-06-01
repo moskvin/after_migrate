@@ -8,7 +8,8 @@ require 'after_migrate/railtie'
 
 module AfterMigrate
   class Configuration
-    attr_accessor :enabled, :verbose, :vacuum, :analyze, :rake_tasks_enhanced, :defer, :store, :store_path, :run_id
+    attr_accessor :enabled, :verbose, :vacuum, :analyze, :rake_tasks_enhanced, :defer,
+                  :store, :store_path, :run_id, :redis, :redis_key_prefix, :redis_ttl
 
     def initialize
       @enabled = true
@@ -20,6 +21,9 @@ module AfterMigrate
       @store = :memory
       @store_path = 'tmp/after_migrate/affected_tables.json'
       @run_id = nil
+      @redis = nil
+      @redis_key_prefix = 'after_migrate'
+      @redis_ttl = 24 * 60 * 60
     end
   end
 
@@ -58,21 +62,41 @@ module AfterMigrate
     end
 
     def store
-      key = [configuration.store.to_s, configuration.store_path.to_s, configuration.run_id.to_s]
-      @store = nil if @store_key != key
-      @store_key = key
+      @store = nil if @store_key != store_key
+      @store_key = store_key
       @store ||= build_store
     end
 
     private
 
+    def store_key
+      [
+        configuration.store.to_s,
+        configuration.store_path.to_s,
+        configuration.run_id.to_s,
+        configuration.redis_key_prefix.to_s,
+        configuration.redis_ttl.to_s
+      ]
+    end
+
     def build_store
       case configuration.store.to_s
       when 'file'
         Stores::FileStore.new(path: configuration.store_path, run_id: configuration.run_id)
+      when 'redis'
+        redis_store
       else
         Stores::Memory.new
       end
+    end
+
+    def redis_store
+      Stores::RedisStore.new(
+        redis: configuration.redis,
+        key_prefix: configuration.redis_key_prefix,
+        run_id: configuration.run_id,
+        ttl: configuration.redis_ttl
+      )
     end
   end
 end

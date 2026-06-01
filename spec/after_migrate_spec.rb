@@ -2,11 +2,16 @@
 
 describe AfterMigrate do
   after do
-    AfterMigrate.reset!
     AfterMigrate.configuration.enabled = true
     AfterMigrate.configuration.store = :memory
     AfterMigrate.configuration.store_path = 'tmp/after_migrate/affected_tables.json'
     AfterMigrate.configuration.run_id = nil
+    AfterMigrate.configuration.redis = nil
+    AfterMigrate.configuration.redis_key_prefix = 'after_migrate'
+    AfterMigrate.configuration.redis_ttl = 24 * 60 * 60
+    AfterMigrate.instance_variable_set(:@store, nil)
+    AfterMigrate.instance_variable_set(:@store_key, nil)
+    AfterMigrate.reset!
   end
 
   describe '.run!' do
@@ -84,6 +89,13 @@ describe AfterMigrate do
       AfterMigrate.configuration.store_path = '/tmp/after_migrate-test.json'
 
       expect(AfterMigrate.store).to be_a(AfterMigrate::Stores::FileStore)
+    end
+
+    it 'uses a redis store when configured' do
+      AfterMigrate.configuration.store = :redis
+      AfterMigrate.configuration.redis = Object.new
+
+      expect(AfterMigrate.store).to be_a(AfterMigrate::Stores::RedisStore)
     end
   end
 end
