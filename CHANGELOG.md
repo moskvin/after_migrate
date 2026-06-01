@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.3] - 2026-06-01
+
+### Added
+- Redis-backed store via `config.store = :redis` for sharing collected migration tables across processes
+- `config.redis` for passing a Redis client, connection pool, or callable client provider
+- `config.redis_key_prefix` and `config.redis_ttl` for namespacing and expiring Redis store keys
+- Redis store support for run isolation via `config.run_id`
+- Redis store specs for persistence, merging, reset behavior, connection pools, `Redis.new` fallback, and missing-client errors
+
+### Changed
+- Store cache keys now include Redis-specific configuration, so changing Redis store settings rebuilds the active store instance
+
 ## [0.2.2] - 2026-05-31
 
 ### Added
