@@ -81,6 +81,41 @@ AfterMigrate.configure do |config|
   config.rake_tasks_enhanced = true
 end
 ```
+
+### Store backends
+
+The collected table names are kept in a store. Choose one with `config.store`:
+
+- `:memory` (default) — a process-local `Concurrent::Map`. Fine for a single-process migration.
+- `:file` — JSON file, shared across rake invocations in the same run.
+- `:redis` — shared across processes; use this for parallel / multi-tenant migrations.
+
+```ruby
+config.store = :redis
+```
+
+> [!IMPORTANT]
+> **Redis: always pass a pooled or memoized client — never a proc that builds a new connection per call.**
+>
+> `config.redis` is read on *every* collected SQL statement. If it returns a
+> fresh `Redis.new` each time (e.g. `config.redis = -> { Redis.new(...) }`),
+> every statement opens a new, unpooled connection. Under parallel or
+> multi-tenant migrations this exhausts the Redis server connection limit
+> (`Connection refused` / `max number of clients reached`).
+>
+> Recommended — a thread-safe `ConnectionPool` (the store uses `pool.with`):
+>
+> ```ruby
+> config.store = :redis
+> config.redis = ConnectionPool.new(size: 2, timeout: 5) { Redis.new(url: ENV["REDIS_URL"]) }
+> ```
+>
+> A memoized single client also works for sequential migrations:
+>
+> ```ruby
+> config.redis = -> { @after_migrate_redis ||= Redis.new(url: ENV["REDIS_URL"]) }
+> ```
+
 ---
 
 ## 🚢 Releasing

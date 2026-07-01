@@ -181,12 +181,18 @@ module AfterMigrate
         block.call(redis)
       end
 
+      # Memoized so a plain client or a `-> { Redis.new }` proc only ever
+      # produces one connection per store instance. Without this, `with_redis`
+      # re-invokes the proc on every merge_tables/affected_tables call, opening
+      # a fresh unpooled connection per SQL statement — which exhausts the
+      # Redis server's connection limit under parallel/multi-tenant migrations.
+      # Pass a ConnectionPool as config.redis for thread-safe concurrency.
       def resolved_redis
-        client = @redis.respond_to?(:call) ? @redis.call : @redis
-        return client if client
-        return Redis.new if defined?(Redis)
-
-        raise 'AfterMigrate Redis store requires config.redis or the redis gem'
+        @resolved_redis ||= begin
+          client = @redis.respond_to?(:call) ? @redis.call : @redis
+          client ||= Redis.new if defined?(Redis)
+          client || raise('AfterMigrate Redis store requires config.redis or the redis gem')
+        end
       end
     end
   end

@@ -22,7 +22,7 @@ This is a Rails gem that automatically runs database maintenance (`ANALYZE`, `VA
 
 2. **`Collector`** (`lib/after_migrate/collector.rb`) — receives every SQL notification, filters to DDL/DML statements (CREATE/ALTER/DROP/INSERT/UPDATE/DELETE), calls the adapter-specific parser, and accumulates table names into `AfterMigrate.affected_tables` (a `Concurrent::Map<schema, Concurrent::Set<table_name>>`).
 
-3. **`AfterMigrate.store`** (`lib/after_migrate/store.rb`) — defaults to an in-memory `Concurrent::Map` wrapped by `AfterMigrate::Stores::Memory`. `AfterMigrate.affected_tables`, `merge_tables`, and `reset!` delegate to the store. The memory store persists across multiple rake task invocations inside one Ruby process and is cleared by `AfterMigrate.run!` (or `AfterMigrate.reset!`). This replaces the old `Current` (`ActiveSupport::CurrentAttributes`) which was reset after every migration.
+3. **`AfterMigrate.store`** (`lib/after_migrate/store.rb`) — defaults to an in-memory `Concurrent::Map` wrapped by `AfterMigrate::Stores::Memory`. `AfterMigrate.affected_tables`, `merge_tables`, and `reset!` delegate to the store. The memory store persists across multiple rake task invocations inside one Ruby process and is cleared by `AfterMigrate.run!` (or `AfterMigrate.reset!`). This replaces the old `Current` (`ActiveSupport::CurrentAttributes`) which was reset after every migration. Alternate backends: `FileStore` (JSON, cross-invocation) and `RedisStore` (cross-process, for parallel/multi-tenant runs). `RedisStore#resolved_redis` memoizes the resolved client per store instance, so `config.redis` is only materialized once — pass a `ConnectionPool` (the store calls `pool.with`) or a memoized client, never a `-> { Redis.new }` proc that builds a connection per call (that opens one connection per SQL statement and exhausts the Redis connection limit under concurrency).
 
 4. **`Executor`** (`lib/after_migrate/executor.rb`) — iterates `AfterMigrate.affected_tables` and calls the correct adapter's `optimize_tables`. Respects the `analyze` config option (`only_affected_tables` / `all_tables` / `none`). Always calls `AfterMigrate.reset!` in its `ensure` block.
 
@@ -45,13 +45,13 @@ This is a Rails gem that automatically runs database maintenance (`ANALYZE`, `VA
 
 Config values are in `AfterMigrate::Configuration` (initialized in `lib/after_migrate.rb`):
 
-| Option                | Default                  | Values                                             |
-|-----------------------|--------------------------|----------------------------------------------------|
-| `enabled`             | `true`                   | bool                                               |
-| `verbose`             | `true`                   | bool                                               |
-| `vacuum`              | `true`                   | bool (PostgreSQL only)                             |
-| `analyze`             | `"only_affected_tables"` | `"only_affected_tables"`, `"all_tables"`, `"none"` |
-| `rake_tasks_enhanced` | `true`                   | bool                                               |
+| Option                | Default                  | Values                                                  |
+|-----------------------|--------------------------|---------------------------------------------------------|
+| `enabled`             | `true`                   | bool                                                    |
+| `verbose`             | `true`                   | bool                                                    |
+| `vacuum`              | `true`                   | bool (PostgreSQL only)                                  |
+| `analyze`             | `"only_affected_tables"` | `"only_affected_tables"`, `"all_tables"`, `"none"`      |
+| `rake_tasks_enhanced` | `true`                   | bool                                                    |
 | `defer`               | `true`                   | bool — skip auto-run; call `AfterMigrate.run!` manually |
 
 ## Multi-tenant usage
