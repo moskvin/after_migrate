@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.6] - 2026-07-16
+
+### Fixed
+- PostgreSQL `ANALYZE` now skips tables that were dropped by a migration instead of failing with `PG::UndefinedTable`, while still analyzing remaining affected tables and re-raising unrelated statement errors
+
 ## [0.2.4] - 2026-06-01
 
 ### Added
