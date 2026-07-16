@@ -97,6 +97,51 @@ describe AfterMigrate::Postgresql do
     end
   end
 
+  describe '.run_analyze' do
+    it 'skips tables that no longer exist' do
+      pg_undefined_table = Class.new(StandardError)
+      missing_table_error = ActiveRecord::StatementInvalid.new('relation does not exist')
+
+      stub_const('PG::UndefinedTable', pg_undefined_table)
+      allow(missing_table_error).to receive(:cause).and_return(pg_undefined_table.new)
+      allow(AfterMigrate).to receive(:log)
+
+      expect(connection).to receive(:execute)
+        .with('ANALYZE VERBOSE "public.posts"')
+        .ordered
+      expect(connection).to receive(:execute)
+        .with('ANALYZE VERBOSE "public.deleted_posts"')
+        .ordered
+        .and_raise(missing_table_error)
+      expect(connection).to receive(:execute)
+        .with('ANALYZE VERBOSE "public.comments"')
+        .ordered
+
+      expect do
+        described_class.run_analyze(schema: 'public', tables: %w[posts deleted_posts comments])
+      end.not_to raise_error
+
+      expect(AfterMigrate).to have_received(:log).with('ANALYZE VERBOSE "public.posts"')
+      expect(AfterMigrate).to have_received(:log).with('ANALYZE VERBOSE "public.deleted_posts"')
+      expect(AfterMigrate).to have_received(:log)
+        .with('Skipping ANALYZE for "public.deleted_posts" - table no longer exists')
+      expect(AfterMigrate).to have_received(:log).with('ANALYZE VERBOSE "public.comments"')
+    end
+
+    it 'raises statement errors that are not missing-table errors' do
+      statement_error = ActiveRecord::StatementInvalid.new('permission denied')
+
+      allow(statement_error).to receive(:cause).and_return(StandardError.new('permission denied'))
+      expect(connection).to receive(:execute)
+        .with('ANALYZE VERBOSE "public.posts"')
+        .and_raise(statement_error)
+
+      expect do
+        described_class.run_analyze(schema: 'public', tables: %w[posts])
+      end.to raise_error(statement_error)
+    end
+  end
+
   describe '.vacuum' do
     it 'qualifies the table with schema when schema is present' do
       expect(connection).to receive(:quote_table_name).with('public.posts').and_return('"public.posts"')

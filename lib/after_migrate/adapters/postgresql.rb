@@ -60,7 +60,19 @@ module AfterMigrate
                 end
         AfterMigrate.log("ANALYZE VERBOSE #{table}")
         connection.execute("ANALYZE#{AfterMigrate.configuration.verbose ? ' VERBOSE ' : ' '}#{table}")
+      rescue ActiveRecord::StatementInvalid => e
+        raise unless pg_undefined_table_error?(e)
+
+        AfterMigrate.log("Skipping ANALYZE for #{table} - table no longer exists")
       end
+    end
+
+    def pg_undefined_table_error?(error)
+      return false unless Object.const_defined?(:PG)
+
+      error.cause.is_a?(Object.const_get(:PG).const_get(:UndefinedTable))
+    rescue NameError
+      false
     end
 
     def optimize_tables(table_names:, schema:, **)
